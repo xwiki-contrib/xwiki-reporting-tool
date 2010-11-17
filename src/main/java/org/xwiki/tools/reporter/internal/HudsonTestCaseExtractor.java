@@ -1,5 +1,6 @@
 package org.xwiki.tools.reporter.internal;
 
+import java.io.FileNotFoundException;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
@@ -83,11 +84,17 @@ public class HudsonTestCaseExtractor
             buildNumberString = buildNumber + "/";
         }
 
-        final Document doc = this.builder.parse(jobURL + LAST_BUILD + APPEND_TO_URL);
-        doc.getDocumentElement().normalize();
-
         final List<TestCase> out = new ArrayList<TestCase>();
 
+        final Document doc;
+        try {
+            doc = this.builder.parse(jobURL + LAST_BUILD + APPEND_TO_URL);
+        } catch (FileNotFoundException e) {
+            // There have not been any builds yet, return an empty list.
+            return out;
+        }
+
+        doc.getDocumentElement().normalize();
         if (Boolean.TRUE.equals(this.testReportXPath.evaluate(doc, XPathConstants.BOOLEAN))) {
             out.addAll(this.getTestReport(jobURL + LAST_BUILD + TEST_REPORT + APPEND_TO_URL));
         }
