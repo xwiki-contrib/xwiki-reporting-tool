@@ -22,7 +22,9 @@ public class Reporter
 {
     private static final String DEFAULT_CONFIG_FILE = "reporterConfig.groovy";
 
-    private static final String CONFIG_FILE_PROPERTY = "reporterConfigScript";
+    private static final String CONFIG_RESOURCE_PROPERTY = "reporterConfigScript";
+
+    private static final String CONFIG_FILE_PROPERTY = "reporterConfigScriptFile";
 
     private final String hudsonURL;
 
@@ -52,6 +54,21 @@ public class Reporter
                 script = IOUtils.toString(new FileInputStream(scriptFile));
                 System.out.println("Using custom configuration script: "
                                    + System.getProperty(CONFIG_FILE_PROPERTY));
+            }
+        }
+
+        if (script == null && System.getProperty(CONFIG_RESOURCE_PROPERTY) != null) {
+            // Try getting a specific resource.
+            final URL configScriptURL =
+                Thread.currentThread().getContextClassLoader().getResource(
+                    System.getProperty(CONFIG_RESOURCE_PROPERTY));
+
+            if (configScriptURL == null) {
+                System.err.println("Could not find custom configuration resource ["
+                                   + System.getProperty(CONFIG_RESOURCE_PROPERTY)
+                                   + "] Using default instead");
+            } else {
+                script = IOUtils.toString(configScriptURL.openStream());
             }
         }
 

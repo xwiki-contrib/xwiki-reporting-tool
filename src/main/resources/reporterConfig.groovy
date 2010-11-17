@@ -11,8 +11,11 @@ import org.xwiki.tools.reporter.publishers.*;
  * NOTE: It is best to run only one reporter and use multiple reports and publishers because each reporter will
  *       scrape the hudson server.
  *
+ * To specify an alternate configuration resource, in the .jar,
+ * use -DreporterConfigScript=otherConfig.groovy
+ *
  * To specify an alternate location for this script on the filesystem,
- * use -DreporterConfigScript=/path/to/config.groovy in the command.
+ * use -DreporterConfigScriptFile=/path/to/config.groovy in the command.
  */
 
 // Where to scrape the data from.
