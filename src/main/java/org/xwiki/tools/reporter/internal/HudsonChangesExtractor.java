@@ -52,17 +52,17 @@ public class HudsonChangesExtractor
     {
         final List<Change> out = new ArrayList<Change>();
         final List<String> toLoad = new ArrayList<String>();
+        try {
+            loadChangesFromURLs(toLoad, this.xpath, this.changesByURL);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         for (String stringURL : queryTheseURLs) {
             if (this.changesByURL.containsKey(stringURL)) {
                 out.addAll(this.changesByURL.get(stringURL));
             } else {
                 toLoad.add(stringURL);
             }
-        }
-        try {
-            out.addAll(loadChangesFromURLs(toLoad, this.xpath));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
         return out;
     }
@@ -150,51 +150,65 @@ public class HudsonChangesExtractor
         return out;
     }
 
-    private static List<Change> loadChangesFromURLs(final List<String> listOfURLs, final XPath xpath)
+    /**
+     * Scrape changes from http server and put into cache.
+     *
+     * @param listOfURLs String representations of URLs to load changes for.
+     * @param xpath an instance of XPath to save power creating them over and over.
+     * @param cache a map to store results in. If a URL is a key in this map then it is not loaded.
+     */
+    private static void loadChangesFromURLs(final List<String> listOfURLs,
+                                                    final XPath xpath,
+                                                    final Map<String, List<Change>> cache)
         throws Exception
     {
         final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         final DocumentBuilder builder = dbf.newDocumentBuilder();
-        final List<Document> documents = new ArrayList<Document>();
-        // TODO: Threaded?
-        for (String stringURL : listOfURLs) {
-            try {
-                documents.add(builder.parse(stringURL));
-            } catch (FileNotFoundException e) {
-                System.err.println("Could not load changes from URL: " + stringURL);
-                System.err.println("Continuing without them.");
-            }
-        }
 
         final XPathExpression changeItem = xpath.compile("mavenBuild/changeSet/item");
         final XPathExpression committerXPath = xpath.compile("mavenBuild/culprit");
+        // TODO: Threaded?
+        for (String stringURL : listOfURLs) {
+            if (!cache.containsKey(stringURL)) {
+                try {
+                    cache.put(stringURL,
+                              changesFromDocument(builder.parse(stringURL), changeItem, committerXPath));
+                } catch (FileNotFoundException e) {
+                    System.err.println("Could not load changes from URL: "
+                                       + stringURL + " Continuing without them.");
+                }
+            }
+        }
+    }
 
+    private static List<Change> changesFromDocument(final Document doc,
+                                                    final XPathExpression changeItem,
+                                                    final XPathExpression committerXPath)
+        throws Exception
+    {
         // Map full names of committers to their "committer name" and put that in the report.
         final Map<String, String> committerNameByFullname = new HashMap<String, String>();
-
         final List<Change> out = new ArrayList<Change>();
 
-        for (Document doc : documents) {
-            final NodeList committerList = (NodeList) committerXPath.evaluate(doc, XPathConstants.NODESET);
-            for (int i = 0; i < committerList.getLength(); i++) {
-                final Node item = committerList.item(i);
-                final String committerURL = item.getFirstChild().getFirstChild().getNodeValue();
-                final String committerName = committerURL.substring(committerURL.lastIndexOf('/') + 1);
-                final String fullName = item.getLastChild().getFirstChild().getNodeValue();
-                committerNameByFullname.put(fullName, committerName);
-            }            
+        final NodeList committerList = (NodeList) committerXPath.evaluate(doc, XPathConstants.NODESET);
+        for (int i = 0; i < committerList.getLength(); i++) {
+            final Node item = committerList.item(i);
+            final String committerURL = item.getFirstChild().getFirstChild().getNodeValue();
+            final String committerName = committerURL.substring(committerURL.lastIndexOf('/') + 1);
+            final String fullName = item.getLastChild().getFirstChild().getNodeValue();
+            committerNameByFullname.put(fullName, committerName);
+        }            
 
-            final NodeList changeList = (NodeList) changeItem.evaluate(doc, XPathConstants.NODESET);
-            for (int i = 0; i < changeList.getLength(); i++) {
-                final Node item = changeList.item(i);
-                final String date = getChildNamed(item, "date").getFirstChild().getNodeValue();
-                final String commitLog = getChildNamed(item, "msg").getFirstChild().getNodeValue();
-                int revision = Integer.parseInt(getChildNamed(item, "revision").getFirstChild().getNodeValue());
-                final String committer = 
-                    committerNameByFullname.get(getChildNamed(item, "user").getFirstChild().getNodeValue());
-                out.add(new DefaultChange(date, commitLog, revision, committer));
-            }
+        final NodeList changeList = (NodeList) changeItem.evaluate(doc, XPathConstants.NODESET);
+        for (int i = 0; i < changeList.getLength(); i++) {
+            final Node item = changeList.item(i);
+            final String date = getChildNamed(item, "date").getFirstChild().getNodeValue();
+            final String commitLog = getChildNamed(item, "msg").getFirstChild().getNodeValue();
+            int revision = Integer.parseInt(getChildNamed(item, "revision").getFirstChild().getNodeValue());
+            final String committer = 
+                committerNameByFullname.get(getChildNamed(item, "user").getFirstChild().getNodeValue());
+            out.add(new DefaultChange(date, commitLog, revision, committer));
         }
         return out;
     }
