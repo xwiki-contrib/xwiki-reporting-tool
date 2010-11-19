@@ -16,7 +16,7 @@ emailPub.setMailConfig(new HashMap<String, String>() {{
 }});
 
 new Reporter(hudsonURL) {{
-    runReport(new RegressionAlertReport(emailPub, Format.HTML));
+    runReport(new DetailedFailureReport(emailPub, Format.HTML));
 }}.run();
 
 
