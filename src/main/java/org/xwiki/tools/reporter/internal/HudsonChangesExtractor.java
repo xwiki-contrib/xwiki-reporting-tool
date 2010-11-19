@@ -1,5 +1,6 @@
 package org.xwiki.tools.reporter.internal;
 
+import java.io.FileNotFoundException;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
@@ -158,7 +159,12 @@ public class HudsonChangesExtractor
         final List<Document> documents = new ArrayList<Document>();
         // TODO: Threaded?
         for (String stringURL : listOfURLs) {
-            documents.add(builder.parse(stringURL));
+            try {
+                documents.add(builder.parse(stringURL));
+            } catch (FileNotFoundException e) {
+                System.err.println("Could not load changes from URL: " + stringURL);
+                System.err.println("Continuing without them.");
+            }
         }
 
         final XPathExpression changeItem = xpath.compile("mavenBuild/changeSet/item");
