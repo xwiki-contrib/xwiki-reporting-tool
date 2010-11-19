@@ -10,14 +10,9 @@ new Reporter(hudsonURL) {{
     runReport(new RegressionAlertReport(new StdoutPublisher() {
         public void publish(final String subject, final String content)
         {
-            // Best method I could think of to trigger hudson to send mail if and only if there are regressions.
-            final File tr = new File(new File(System.getProperty("java.io.tmpdir")), "regressionAlertTrigger.mt");
-            if (content.length() > 0) {
-                super.publish(subject, content);
-                tr.createNewFile();
-            } else if (tr.exists()) {
-                tr.delete();
-            }
+            super.publish(subject, content);
+            // Best way I can think of to prevent sending of empty emails every time there are no regressions.
+            throw new RuntimeException("This exception is needed to trigger hudson to publish the email.");
         }
     }, Format.HTML));
 }}.run();
