@@ -10,8 +10,9 @@ final HtmlMailPublisher emailPub = new HtmlMailPublisher();
 emailPub.addRecipient(System.getProperty("sendMailTo"));
 emailPub.setMailConfig(new HashMap<String, String>() {{
     put("from", "build.noreply@xwiki.org");
-    put("port", "25");
+    put("port", System.getProperty("mailPort"));
     put("host", System.getProperty("mailHost"));
+    put("javamailExtraProperties", System.getProperty("mailProps"));
 }});
 
 new Reporter(hudsonURL) {{
