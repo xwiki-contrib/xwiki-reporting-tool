@@ -15,14 +15,16 @@ emailPub.setMailConfig(new HashMap<String, String>() {{
     put("javamailExtraProperties", System.getProperty("mailProps"));
 }});
 
+final Publisher p = new Publisher() {
+    public void publish(final String subject, final String content)
+    {
+        emailPub.publish(subject, content);
+        new StdoutPublisher().publish(subject, content);
+    }
+}
+
 new Reporter(hudsonURL) {{
-    runReport(new DetailedFailureReport(new Publisher() {
-        public void publish(final String subject, final String content)
-        {
-            emailPub.publish(subject, content);
-            new StdoutPublisher().publish(subject, content);
-        }
-    }, Format.HTML));
+    runReport(new RegressionAlertReport(p, Format.HTML));
 }}.run();
 
 
